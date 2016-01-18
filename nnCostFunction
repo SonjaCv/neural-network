@@ -1,0 +1,90 @@
+function [J, grad] = nnCostFunction(nn_params, input_layer_size, hidden_layer_size, num_labels, X, y, lambda)
+%   Cost function and gradient descent calculation for a two layer neural network 
+
+% Reshape nn_params back into the parameters Theta1 and Theta2, the weight matricesfor our 2 layer neural network
+Theta1 = reshape(nn_params(1:hidden_layer_size * (input_layer_size + 1)),hidden_layer_size, (input_layer_size + 1));
+Theta2 = reshape(nn_params((1 + (hidden_layer_size * (input_layer_size + 1))):end), num_labels, (hidden_layer_size + 1));
+   
+
+Theta1_grad = zeros(size(Theta1)); 
+Theta2_grad = zeros(size(Theta2));    
+
+m = size(X, 1);
+J = 0;
+ y_data = zeros(m,num_labels); 
+for a=1:m,
+y_row = zeros(num_labels,1)';
+y_row(1,y(a)) = 1;
+y_data(a,:) = y_row;
+end;
+  
+
+h = zeros(num_labels,1);
+hidden_layer = zeros(hidden_layer_size,1);
+z_hidden = hidden_layer;
+for i=1:m,
+hidden_layer = zeros(hidden_layer_size,1);
+temp_Params =[1, X(i,:)];
+for j=1:hidden_layer_size,
+hidden_layer(j,1) = temp_Params * Theta1(j,:)';
+end;
+z_hidden = hidden_layer;
+hidden_layer = sigmoid(hidden_layer);
+
+hidden_layer = [1, hidden_layer'];
+a_hidden = hidden_layer';
+
+for j=1:num_labels,
+h(j,1) = hidden_layer * Theta2(j,:)';
+end;
+z_output = h;
+h = sigmoid(h);
+
+delta_output = h.- y_data(i,:)';
+
+tempTheta2 = Theta2(:, 2:end);
+delta_hidden = zeros(size(tempTheta2,2),1);
+
+for s=1:size(tempTheta2,2),
+for r =1:size(tempTheta2,1),
+delta_hidden(s,1) = delta_hidden(s,1) + (tempTheta2(r,s) * delta_output(r,1));
+end;
+end;
+delta_hidden = delta_hidden.* sigmoidGradient(z_hidden);
+
+Theta2_grad = Theta2_grad + (delta_output * a_hidden');
+Theta1_grad = Theta1_grad + (delta_hidden * [1,X(i,:)]);
+
+
+for j = 1: num_labels,
+J  = J + ((-y_data(i,j) * log(h(j,:))) - ((1 - y_data(i,j)) * log(1 - h(j,:))));
+end;
+
+end;
+
+J = (1/m) * J;
+
+reg = 0;
+for i=1:size(Theta1,1),
+for j = 2:size(Theta1,2),
+reg = reg + Theta1(i,j)^2;
+end;
+end;
+for i=1:size(Theta2,1),
+for j = 2:size(Theta2,2),
+reg = reg + Theta2(i,j)^2;
+end;
+end;
+
+J = J + (lambda / (2 *m)) * reg;
+Theta2_grad = (1/m).*Theta2_grad;
+Theta1_grad = (1/m).*Theta1_grad;
+
+Theta1_grad = [Theta1_grad(:,1), Theta1_grad(:,2:end).+(Theta1(:,2:end).*(lambda/m))];
+Theta2_grad = [Theta2_grad(:,1), Theta2_grad(:,2:end).+(Theta2(:,2:end).*(lambda/m))];
+
+
+% Unroll gradients
+grad = [Theta1_grad(:) ; Theta2_grad(:)];
+
+end
